@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Killer Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white">
+
+<div class="p-6">
+
+  <h1 class="text-2xl font-bold text-red-600 mb-4">☠ Killer Hub</h1>
+
+  <input id="repoName" placeholder="Nome do repo" class="border p-2" />
+  <button onclick="createRepo()" class="bg-red-600 text-white px-4 py-2">Criar</button>
+
+  <h2 class="mt-6">Repos:</h2>
+  <div id="repos"></div>
+
+</div>
+
+<script>
+async function createRepo() {
+  const name = document.getElementById("repoName").value;
+
+  await fetch("/api/create-repo", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ name })
+  });
+
+  loadRepos();
+}
+
+async function loadRepos() {
+  const res = await fetch("/api/repos");
+  const data = await res.json();
+
+  const div = document.getElementById("repos");
+  div.innerHTML = "";
+
+  data.forEach(repo => {
+    div.innerHTML += `<div onclick="openRepo('${repo}')" class="cursor-pointer text-blue-600">${repo}</div>`;
+  });
+}
+
+function openRepo(repo) {
+  localStorage.setItem("repo", repo);
+  window.location.href = "repo.html";
+}
+
+loadRepos();
+</script>
+
+</body>
+</html>

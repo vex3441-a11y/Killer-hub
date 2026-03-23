@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Editor</title>
+  <style>
+    body { margin: 0; }
+    #editor { height: 90vh; }
+  </style>
+</head>
+<body>
+
+<button onclick="save()">Salvar</button>
+
+<div id="editor"></div>
+
+<script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
+
+<script>
+const repo = localStorage.getItem("repo");
+const file = localStorage.getItem("file");
+
+require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@latest/min/vs' } });
+
+require(['vs/editor/editor.main'], async function () {
+
+  let code = "";
+
+  try {
+    const res = await fetch(`/api/file?repo=${repo}&filename=${file}`);
+    code = await res.text();
+  } catch {}
+
+  window.editor = monaco.editor.create(document.getElementById('editor'), {
+    value: code || 'print("Novo script")',
+    language: 'lua'
+  });
+
+});
+
+async function save() {
+  const content = editor.getValue();
+
+  await fetch("/api/save-file", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      repo,
+      filename: file,
+      content
+    })
+  });
+
+  alert("Salvo!");
+}
+</script>
+
+</body>
+</html>

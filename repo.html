@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Repo</title>
+</head>
+<body>
+
+<h1 id="title"></h1>
+
+<input id="filename" placeholder="nome.lua" />
+<button onclick="newFile()">Criar Arquivo</button>
+
+<div id="files"></div>
+
+<script>
+const repo = localStorage.getItem("repo");
+document.getElementById("title").innerText = repo;
+
+async function loadFiles() {
+  const res = await fetch(`/api/files/${repo}`);
+  const files = await res.json();
+
+  const div = document.getElementById("files");
+  div.innerHTML = "";
+
+  files.forEach(f => {
+    div.innerHTML += `<div onclick="openFile('${f}')">${f}</div>`;
+  });
+}
+
+function openFile(file) {
+  localStorage.setItem("file", file);
+  window.location.href = "editor.html";
+}
+
+function newFile() {
+  const name = document.getElementById("filename").value;
+  localStorage.setItem("file", name);
+  window.location.href = "editor.html";
+}
+
+loadFiles();
+</script>
+
+</body>
+</html>
