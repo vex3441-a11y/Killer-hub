@@ -1,14 +1,13 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const fs = require("fs-extra");
 const path = require("path");
 
 const app = express();
 
-// middleware
-app.use(bodyParser.json());
+// middleware (sem body-parser)
+app.use(express.json());
 
-// servir arquivos da raiz (index.html, repo.html, editor.html)
+// servir arquivos da raiz (frontend)
 app.use(express.static(__dirname));
 
 // rota principal
@@ -19,63 +18,104 @@ app.get("/", (req, res) => {
 // caminho dos repositórios
 const REPO_PATH = path.join(__dirname, "repos");
 
+// garantir que a pasta existe (IMPORTANTE)
+fs.ensureDirSync(REPO_PATH);
+
+// =======================
+// API
+// =======================
+
 // criar repo
 app.post("/api/create-repo", async (req, res) => {
-  const { name } = req.body;
+  try {
+    const { name } = req.body;
 
-  const repoDir = path.join(REPO_PATH, name);
-  await fs.ensureDir(repoDir);
+    if (!name) {
+      return res.status(400).json({ error: "Nome inválido" });
+    }
 
-  res.json({ status: "ok" });
+    const repoDir = path.join(REPO_PATH, name);
+    await fs.ensureDir(repoDir);
+
+    res.json({ status: "ok" });
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao criar repo" });
+  }
 });
 
 // listar repos
 app.get("/api/repos", async (req, res) => {
-  const repos = await fs.readdir(REPO_PATH).catch(() => []);
-  res.json(repos);
+  try {
+    const repos = await fs.readdir(REPO_PATH);
+    res.json(repos);
+  } catch {
+    res.json([]);
+  }
 });
 
 // salvar arquivo
 app.post("/api/save-file", async (req, res) => {
-  const { repo, filename, content } = req.body;
+  try {
+    const { repo, filename, content } = req.body;
 
-  const filePath = path.join(REPO_PATH, repo, filename);
-  await fs.ensureDir(path.dirname(filePath));
-  await fs.writeFile(filePath, content);
+    if (!repo || !filename) {
+      return res.status(400).json({ error: "Dados inválidos" });
+    }
 
-  res.json({ status: "salvo" });
+    const filePath = path.join(REPO_PATH, repo, filename);
+
+    await fs.ensureDir(path.dirname(filePath));
+    await fs.writeFile(filePath, content || "");
+
+    res.json({ status: "salvo" });
+  } catch {
+    res.status(500).json({ error: "Erro ao salvar arquivo" });
+  }
 });
 
 // listar arquivos do repo
 app.get("/api/files/:repo", async (req, res) => {
-  const repo = req.params.repo;
-
-  const dir = path.join(REPO_PATH, repo);
-  const files = await fs.readdir(dir).catch(() => []);
-
-  res.json(files);
+  try {
+    const dir = path.join(REPO_PATH, req.params.repo);
+    const files = await fs.readdir(dir);
+    res.json(files);
+  } catch {
+    res.json([]);
+  }
 });
 
 // pegar conteúdo do arquivo
 app.get("/api/file", async (req, res) => {
-  const { repo, filename } = req.query;
+  try {
+    const { repo, filename } = req.query;
 
-  const filePath = path.join(REPO_PATH, repo, filename);
-  const content = await fs.readFile(filePath, "utf-8").catch(() => "");
+    const filePath = path.join(REPO_PATH, repo, filename);
+    const content = await fs.readFile(filePath, "utf-8");
 
-  res.send(content);
+    res.send(content);
+  } catch {
+    res.send("");
+  }
 });
 
 // RAW (pra loadstring)
 app.get("/raw/:repo/:file", async (req, res) => {
-  const filePath = path.join(REPO_PATH, req.params.repo, req.params.file);
-  const content = await fs.readFile(filePath, "utf-8").catch(() => "erro");
+  try {
+    const filePath = path.join(REPO_PATH, req.params.repo, req.params.file);
+    const content = await fs.readFile(filePath, "utf-8");
 
-  res.type("text/plain");
-  res.send(content);
+    res.type("text/plain");
+    res.send(content);
+  } catch {
+    res.status(404).send("erro");
+  }
 });
 
-// iniciar servidor (IMPORTANTE pro Railway)
-app.listen(process.env.PORT || 3000, () => {
-  console.log("🔥 Killer Hub rodando");
+// =======================
+// START SERVER (ESSENCIAL)
+// =======================
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("🔥 Killer Hub rodando na porta " + PORT);
 });
